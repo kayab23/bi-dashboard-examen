@@ -40,6 +40,7 @@ app.add_middleware(
 # Determinar ruta absoluta del directorio static
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+DATA_DIR = BASE_DIR / "data"  # Para cargar CSVs
 
 # Servir archivos estáticos
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -624,6 +625,13 @@ async def get_new_vs_returning(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en /api/new-vs-returning: {str(e)}")
+
+# ============================================================================
+# ADMIN ENDPOINTS - Inicialización de Datos
+# ============================================================================
+
+from init_data import router as init_router
+app.include_router(init_router, tags=["admin"])
 
 if __name__ == "__main__":
     import uvicorn
