@@ -18,13 +18,20 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_TYPE = os.getenv("DB_TYPE", "sqlserver" if not DATABASE_URL else "postgresql")
 
-# Importar driver correspondiente
+# Importar driver correspondiente (lazy import para evitar errores)
 if DB_TYPE == "postgresql" or DATABASE_URL:
-    import psycopg2
-    import psycopg2.extras
-    DB_TYPE = "postgresql"
+    try:
+        import psycopg2
+        import psycopg2.extras
+        DB_TYPE = "postgresql"
+    except ImportError:
+        print("⚠️  psycopg2 no disponible, usando modo sin DB")
+        DB_TYPE = "none"
 else:
-    import pyodbc
+    try:
+        import pyodbc
+    except ImportError:
+        print("⚠️  pyodbc no disponible")
 
 app = FastAPI(title="Dashboard BI")
 
