@@ -243,12 +243,6 @@ async function loadDriversDashboard() {
         const cityResponse = await fetch(`${API_BASE}/api/sales-by-city?${queryParams}`);
         const cityData = await cityResponse.json();
         
-        // Validar que es un array
-        if (!Array.isArray(cityData)) {
-            console.error('Error: cityData no es un array:', cityData);
-            throw new Error(cityData.detail || 'Error cargando datos de ciudades');
-        }
-        
         const cityTrace = {
             x: cityData.map(d => d.net_sales),
             y: cityData.map(d => d.city),
@@ -268,11 +262,6 @@ async function loadDriversDashboard() {
         const channelResponse = await fetch(`${API_BASE}/api/sales-by-channel?${queryParams}`);
         const channelData = await channelResponse.json();
         
-        if (!Array.isArray(channelData)) {
-            console.error('Error: channelData no es un array:', channelData);
-            throw new Error(channelData.detail || 'Error cargando datos de canales');
-        }
-        
         const channelTrace = {
             x: channelData.map(d => d.net_sales),
             y: channelData.map(d => d.channel),
@@ -291,11 +280,6 @@ async function loadDriversDashboard() {
         // 3. Top Products by Gross Margin
         const productsResponse = await fetch(`${API_BASE}/api/top-products?${queryParams}`);
         const products = await productsResponse.json();
-        
-        if (!Array.isArray(products)) {
-            console.error('Error: products no es un array:', products);
-            throw new Error(products.detail || 'Error cargando productos');
-        }
         
         const productsTrace = {
             x: products.map(d => d.gross_margin),
@@ -318,11 +302,6 @@ async function loadDriversDashboard() {
         const categoryResponse = await fetch(`${API_BASE}/api/sales-by-category?${queryParams}`);
         const categoryData = await categoryResponse.json();
         
-        if (!Array.isArray(categoryData)) {
-            console.error('Error: categoryData no es un array:', categoryData);
-            throw new Error(categoryData.detail || 'Error cargando categorías');
-        }
-        
         const categoryTrace = {
             labels: categoryData.map(d => d.category),
             values: categoryData.map(d => d.net_sales),
@@ -342,11 +321,6 @@ async function loadDriversDashboard() {
         // 5. New vs Returning Customers
         const nvReturningResponse = await fetch(`${API_BASE}/api/new-vs-returning?${queryParams}`);
         const nvReturningData = await nvReturningResponse.json();
-        
-        if (!Array.isArray(nvReturningData)) {
-            console.error('Error: nvReturningData no es un array:', nvReturningData);
-            throw new Error(nvReturningData.detail || 'Error cargando datos de clientes');
-        }
         
         const newCustomersTrace = {
             x: nvReturningData.map(d => d.month),

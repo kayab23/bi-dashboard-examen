@@ -33,6 +33,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
     """Conexión a PostgreSQL"""
+    if not DATABASE_URL or "mock" in DATABASE_URL:
+        return None
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 @app.get("/")
@@ -44,6 +46,8 @@ async def root():
 async def get_kpis():
     """KPIs principales para Executive Dashboard"""
     conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database not configured - using mock data in frontend")
     cur = conn.cursor()
     
     # Net Sales MTD y YTD
