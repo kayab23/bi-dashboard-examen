@@ -21,18 +21,30 @@ DB_TYPE = os.getenv("DB_TYPE", "sqlserver" if not DATABASE_URL else "postgresql"
 # Importar driver correspondiente (lazy import para evitar errores)
 if DB_TYPE == "postgresql" or DATABASE_URL:
     try:
-        import psycopg2
-        import psycopg2.extras
+        # Intentar psycopg v3 primero (compatible con Python 3.13)
+        import psycopg
+        PSYCOPG_VERSION = 3
         DB_TYPE = "postgresql"
-        print(f"✅ psycopg2 importado correctamente. DB_TYPE={DB_TYPE}, DATABASE_URL={'presente' if DATABASE_URL else 'ausente'}")
-    except ImportError as e:
-        print(f"⚠️  psycopg2 no disponible: {e}")
-        DB_TYPE = "none"
+        print(f"✅ psycopg v3 importado. DB_TYPE={DB_TYPE}")
+    except ImportError:
+        try:
+            # Fallback a psycopg2 (Python 3.11 y anterior)
+            import psycopg2
+            import psycopg2.extras
+            PSYCOPG_VERSION = 2
+            DB_TYPE = "postgresql"
+            print(f"✅ psycopg2 importado. DB_TYPE={DB_TYPE}")
+        except ImportError as e:
+            print(f"⚠️  Ningún driver PostgreSQL disponible: {e}")
+            DB_TYPE = "none"
+            PSYCOPG_VERSION = 0
 else:
     try:
         import pyodbc
+        PSYCOPG_VERSION = 0
     except ImportError:
         print("⚠️  pyodbc no disponible")
+        PSYCOPG_VERSION = 0
 
 app = FastAPI(title="Dashboard BI")
 
@@ -57,7 +69,12 @@ def get_db_connection():
     """Conexión a base de datos (SQL Server o PostgreSQL)"""
     if DB_TYPE == "postgresql":
         # PostgreSQL (Render)
-        conn = psycopg2.connect(DATABASE_URL)
+        if PSYCOPG_VERSION == 3:
+            # psycopg v3
+            conn = psycopg.connect(DATABASE_URL)
+        else:
+            # psycopg2
+            conn = psycopg2.connect(DATABASE_URL)
         return conn
     else:
         # SQL Server (Local)
