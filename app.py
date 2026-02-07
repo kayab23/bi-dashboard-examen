@@ -24,8 +24,9 @@ if DB_TYPE == "postgresql" or DATABASE_URL:
         import psycopg2
         import psycopg2.extras
         DB_TYPE = "postgresql"
-    except ImportError:
-        print("⚠️  psycopg2 no disponible, usando modo sin DB")
+        print(f"✅ psycopg2 importado correctamente. DB_TYPE={DB_TYPE}, DATABASE_URL={'presente' if DATABASE_URL else 'ausente'}")
+    except ImportError as e:
+        print(f"⚠️  psycopg2 no disponible: {e}")
         DB_TYPE = "none"
 else:
     try:
