@@ -1,18 +1,30 @@
 """
-Dashboard BI - FastAPI Backend con SQL Server
+Dashboard BI - FastAPI Backend
+Soporta SQL Server (local) y PostgreSQL (Render)
 Implementa TODOS los requerimientos del examen BI
 """
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import pyodbc
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Optional
 
 load_dotenv()
+
+# Detectar tipo de base de datos
+DATABASE_URL = os.getenv("DATABASE_URL")
+DB_TYPE = os.getenv("DB_TYPE", "sqlserver" if not DATABASE_URL else "postgresql")
+
+# Importar driver correspondiente
+if DB_TYPE == "postgresql" or DATABASE_URL:
+    import psycopg2
+    import psycopg2.extras
+    DB_TYPE = "postgresql"
+else:
+    import pyodbc
 
 app = FastAPI(title="Dashboard BI")
 
@@ -32,14 +44,20 @@ STATIC_DIR = BASE_DIR / "static"
 # Servir archivos estáticos
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-def get_sql_server_connection():
-    """Conexión a SQL Server local"""
-    server = os.getenv("SQL_SERVER", "DESKTOP-CCBH45L")
-    database = os.getenv("SQL_DATABASE", "BI_Prueba")
-    driver = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
-    
-    conn_str = f"DRIVER={{{driver}}}; SERVER={server}; DATABASE={database}; Trusted_Connection=yes;"
-    return pyodbc.connect(conn_str)
+def get_db_connection():
+    """Conexión a base de datos (SQL Server o PostgreSQL)"""
+    if DB_TYPE == "postgresql":
+        # PostgreSQL (Render)
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    else:
+        # SQL Server (Local)
+        server = os.getenv("SQL_SERVER", "DESKTOP-CCBH45L")
+        database = os.getenv("SQL_DATABASE", "BI_Prueba")
+        driver = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
+        
+        conn_str = f"DRIVER={{{driver}}}; SERVER={server}; DATABASE={database}; Trusted_Connection=yes;"
+        return pyodbc.connect(conn_str)
 
 @app.get("/")
 async def root():
@@ -50,7 +68,7 @@ async def root():
 async def get_filters():
     """Obtener opciones para filtros (ciudades, canales, categorías, fechas)"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Ciudades
@@ -113,7 +131,7 @@ async def get_kpis(
     Página 1: Net Sales (MTD y YTD), Gross Margin y %, Órdenes, AOV, Unidades, Returns (% y $)
     """
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Construir WHERE clause
@@ -230,7 +248,7 @@ async def get_monthly_trend(
 ):
     """Tendencia mensual con variación vs mes anterior"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
@@ -323,7 +341,7 @@ async def get_sales_by_city(
 ):
     """Net Sales por ciudad (NO filtrar por ciudad aquí)"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
@@ -379,7 +397,7 @@ async def get_sales_by_channel(
 ):
     """Net Sales por canal"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
@@ -427,7 +445,7 @@ async def get_sales_by_category(
 ):
     """Net Sales por categoría con % mix"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
@@ -484,7 +502,7 @@ async def get_top_products(
 ):
     """Top 10 productos por margen bruto"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
@@ -545,7 +563,7 @@ async def get_new_vs_returning(
 ):
     """Clientes nuevos vs recurrentes por mes"""
     try:
-        conn = get_sql_server_connection()
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         where_conditions = ["o.status = 'paid'"]
