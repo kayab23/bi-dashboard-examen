@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard BI - Examen</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Dashboard BI - Análisis Retail</h1>
+            <p class="subtitle">Examen Business Intelligence - Parte B</p>
+        </header>
+
+        <!-- Navegación -->
+        <nav class="tabs">
+            <button class="tab active" onclick="showPage('executive')">Executive Dashboard</button>
+            <button class="tab" onclick="showPage('drivers')">Drivers Dashboard</button>
+        </nav>
+
+        <!-- PÁGINA 1: Executive Dashboard -->
+        <div id="executive" class="page">
+            <div class="filters">
+                <h3>🔍 Filtros</h3>
+                <select id="filterCity">
+                    <option value="all">Todas las ciudades</option>
+                </select>
+                <select id="filterChannel">
+                    <option value="all">Todos los canales</option>
+                    <option value="online">Online</option>
+                    <option value="store">Store</option>
+                </select>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Net Sales MTD</div>
+                    <div class="kpi-value" id="netSalesMTD">$0</div>
+                    <div class="kpi-change positive">+0%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Net Sales YTD</div>
+                    <div class="kpi-value" id="netSalesYTD">$0</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Gross Margin</div>
+                    <div class="kpi-value" id="grossMargin">$0</div>
+                    <div class="kpi-subtitle" id="grossMarginPct">0%</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Órdenes</div>
+                    <div class="kpi-value" id="totalOrders">0</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">AOV</div>
+                    <div class="kpi-value" id="aov">$0</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Return Rate</div>
+                    <div class="kpi-value" id="returnRate">0%</div>
+                    <div class="kpi-subtitle" id="totalReturns">$0</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Tendencia Mensual de Ventas</h3>
+                <div id="monthlyTrendChart"></div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 2: Drivers Dashboard -->
+        <div id="drivers" class="page" style="display: none;">
+            <div class="chart-row">
+                <div class="chart-half">
+                    <h3>Ventas por Ciudad</h3>
+                    <div id="salesByCityChart"></div>
+                </div>
+                <div class="chart-half">
+                    <h3>Top 10 Productos por Margen</h3>
+                    <div id="topProductsChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Dashboard creado con FastAPI + Plotly.js | Examen BI 2026</p>
+    </footer>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
