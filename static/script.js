@@ -146,15 +146,15 @@ async function loadExecutiveDashboard() {
         const kpisResponse = await fetch(`${API_BASE}/api/kpis?${queryParams}`);
         const kpis = await kpisResponse.json();
         
-        document.getElementById('netSalesMTD').textContent = formatCurrency(kpis.net_sales_mtd);
-        document.getElementById('netSalesYTD').textContent = formatCurrency(kpis.net_sales_ytd);
-        document.getElementById('grossMargin').textContent = formatCurrency(kpis.gross_margin);
-        document.getElementById('grossMarginPct').textContent = `${kpis.gross_margin_pct.toFixed(1)}%`;
-        document.getElementById('totalOrders').textContent = formatNumber(kpis.total_orders);
-        document.getElementById('totalUnits').textContent = formatNumber(kpis.total_units);
-        document.getElementById('aov').textContent = formatCurrency(kpis.aov);
-        document.getElementById('returnRate').textContent = `${kpis.return_rate.toFixed(2)}%`;
-        document.getElementById('totalReturns').textContent = formatCurrency(kpis.total_returns);
+        document.getElementById('netSalesMTD').textContent = formatCurrency(kpis.net_sales_mtd || 0);
+        document.getElementById('netSalesYTD').textContent = formatCurrency(kpis.net_sales_ytd || 0);
+        document.getElementById('grossMargin').textContent = formatCurrency(kpis.gross_margin || 0);
+        document.getElementById('grossMarginPct').textContent = `${(kpis.gross_margin_pct ?? 0).toFixed(1)}%`;
+        document.getElementById('totalOrders').textContent = formatNumber(kpis.total_orders || 0);
+        document.getElementById('totalUnits').textContent = formatNumber(kpis.total_units || 0);
+        document.getElementById('aov').textContent = formatCurrency(kpis.aov || 0);
+        document.getElementById('returnRate').textContent = `${(kpis.return_rate ?? 0).toFixed(2)}%`;
+        document.getElementById('totalReturns').textContent = formatCurrency(kpis.total_returns || 0);
         
         // Tendencia Mensual
         const trendResponse = await fetch(`${API_BASE}/api/monthly-trend?${queryParams}`);
@@ -287,7 +287,7 @@ async function loadDriversDashboard() {
             type: 'bar',
             orientation: 'h',
             marker: { color: '#8b5cf6' },
-            text: products.map(d => `${d.gross_margin_pct.toFixed(1)}%`),
+            text: products.map(d => `${(d.gross_margin_pct ?? 0).toFixed(1)}%`),
             textposition: 'auto',
             hovertemplate: '%{y}<br>Margen: %{x:$,.0f} (%{text})<extra></extra>'
         };
