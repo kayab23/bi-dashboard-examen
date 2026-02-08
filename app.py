@@ -121,6 +121,28 @@ async def root():
     """Servir dashboard"""
     return FileResponse("static/index.html")
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint para mantener servicio activo (UptimeRobot)"""
+    from datetime import datetime
+    try:
+        # Verificar conexión a BD
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.close()
+        conn.close()
+        db_status = "connected"
+    except:
+        db_status = "disconnected"
+    
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "database": db_status,
+        "db_type": DB_TYPE
+    }
+
 @app.get("/api/filters")
 async def get_filters():
     """Obtener opciones para filtros (ciudades, canales, categorías, fechas)"""
