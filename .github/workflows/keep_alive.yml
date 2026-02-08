@@ -1,0 +1,28 @@
+name: Keep Render Service Active
+
+on:
+  schedule:
+    # Ejecutar cada 5 minutos
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Permitir ejecución manual
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          echo "🔄 Haciendo ping a Render para mantener servicio activo..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://bi-dashboard-examen.onrender.com/health)
+          
+          if [ $response -eq 200 ]; then
+            echo "✅ Servicio activo - Status: $response"
+          else
+            echo "⚠️  Respuesta inesperada - Status: $response"
+            exit 1
+          fi
+      
+      - name: Log Timestamp
+        run: |
+          echo "Última ejecución: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
