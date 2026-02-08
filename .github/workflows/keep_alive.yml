@@ -5,6 +5,11 @@ on:
     # Ejecutar cada 5 minutos
     - cron: '*/5 * * * *'
   workflow_dispatch: # Permitir ejecución manual
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/keep_alive.yml'
 
 jobs:
   ping:
