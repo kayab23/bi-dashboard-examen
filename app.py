@@ -326,7 +326,7 @@ async def get_monthly_trend(
         query = f"""
         WITH monthly_base AS (
             SELECT 
-                FORMAT(o.order_date, 'yyyy-MM') AS month,
+                {sql_format_date('o.order_date', 'yyyy-MM')} AS month,
                 o.order_id,
                 SUM(oi.qty * oi.unit_price) AS item_sales,
                 o.discount_amount
@@ -335,7 +335,7 @@ async def get_monthly_trend(
             JOIN stores s ON o.store_id = s.store_id
             JOIN customers c ON o.customer_id = c.customer_id
             WHERE {where_clause}
-            GROUP BY FORMAT(o.order_date, 'yyyy-MM'), o.order_id, o.discount_amount
+            GROUP BY {sql_format_date('o.order_date', 'yyyy-MM')}, o.order_id, o.discount_amount
         ),
         monthly_agg AS (
             SELECT 
@@ -347,22 +347,22 @@ async def get_monthly_trend(
         ),
         monthly_returns AS (
             SELECT 
-                FORMAT(o.order_date, 'yyyy-MM') AS month,
+                {sql_format_date('o.order_date', 'yyyy-MM')} AS month,
                 SUM(r.amount_returned) AS returns
             FROM returns r
             JOIN orders o ON r.order_id = o.order_id
             JOIN stores s ON o.store_id = s.store_id
             JOIN customers c ON o.customer_id = c.customer_id
             WHERE {where_clause}
-            GROUP BY FORMAT(o.order_date, 'yyyy-MM')
+            GROUP BY {sql_format_date('o.order_date', 'yyyy-MM')}
         )
         SELECT 
             ma.month,
             ma.gross_sales,
             ma.discounts,
-            ISNULL(mr.returns, 0) AS returns,
-            ma.gross_sales - ma.discounts - ISNULL(mr.returns, 0) AS net_sales,
-            LAG(ma.gross_sales - ma.discounts - ISNULL(mr.returns, 0), 1) OVER (ORDER BY ma.month) AS prev_net_sales
+            {sql_isnull('mr.returns', '0')} AS returns,
+            ma.gross_sales - ma.discounts - {sql_isnull('mr.returns', '0')} AS net_sales,
+            LAG(ma.gross_sales - ma.discounts - {sql_isnull('mr.returns', '0')}, 1) OVER (ORDER BY ma.month) AS prev_net_sales
         FROM monthly_agg ma
         LEFT JOIN monthly_returns mr ON ma.month = mr.month
         ORDER BY ma.month
@@ -577,9 +577,12 @@ async def get_top_products(
         
         where_clause = " AND ".join(where_conditions)
         
+        # Concatenación compatible
+        concat_expr = "p.category || '-' || p.brand" if DB_TYPE == "postgresql" else "p.category + '-' + p.brand"
+        
         query = f"""
-        SELECT TOP 10
-            p.category + '-' + p.brand AS product_name,
+        SELECT {sql_top(10) if DB_TYPE != 'postgresql' else ''}
+            {concat_expr} AS product_name,
             SUM(oi.qty * oi.unit_price) AS revenue,
             SUM(oi.qty * oi.unit_cost) AS cogs,
             SUM(oi.qty * (oi.unit_price - oi.unit_cost)) AS gross_margin,
@@ -588,6 +591,12 @@ async def get_top_products(
         JOIN order_items oi ON o.order_id = oi.order_id
         JOIN products p ON oi.product_id = p.product_id
         JOIN stores s ON o.store_id = s.store_id
+        JOIN customers c ON o.customer_id = c.customer_id
+        WHERE {where_clause}
+        GROUP BY {concat_expr}
+        ORDER BY gross_margin DESC
+        {sql_limit_clause(10)}
+        """
         JOIN customers c ON o.customer_id = c.customer_id
         WHERE {where_clause}
         GROUP BY p.category, p.brand
@@ -642,14 +651,14 @@ async def get_new_vs_returning(
         WITH first_purchase AS (
             SELECT 
                 o.customer_id,
-                FORMAT(MIN(o.order_date), 'yyyy-MM') AS cohort_month
+                {sql_format_date('MIN(o.order_date)', 'yyyy-MM')} AS cohort_month
             FROM orders o
             WHERE o.status = 'paid'
             GROUP BY o.customer_id
         ),
         monthly_orders AS (
             SELECT 
-                FORMAT(o.order_date, 'yyyy-MM') AS month,
+                {sql_format_date('o.order_date', 'yyyy-MM')} AS month,
                 o.customer_id,
                 fp.cohort_month
             FROM orders o
