@@ -85,6 +85,37 @@ def get_db_connection():
         conn_str = f"DRIVER={{{driver}}}; SERVER={server}; DATABASE={database}; Trusted_Connection=yes;"
         return pyodbc.connect(conn_str)
 
+def sql_format_date(date_col: str, format: str) -> str:
+    """Generar FORMAT de fecha compatible con ambas BD"""
+    if DB_TYPE == "postgresql":
+        # PostgreSQL usa TO_CHAR
+        pg_format = format.replace('yyyy', 'YYYY').replace('MM', 'MM')
+        return f"TO_CHAR({date_col}, '{pg_format}')"
+    else:
+        # SQL Server usa FORMAT
+        return f"FORMAT({date_col}, '{format}')"
+
+def sql_isnull(expr: str, default: str) -> str:
+    """Generar ISNULL/COALESCE compatible"""
+    if DB_TYPE == "postgresql":
+        return f"COALESCE({expr}, {default})"
+    else:
+        return f"ISNULL({expr}, {default})"
+
+def sql_top(n: int) -> str:
+    """Generar TOP N / LIMIT N compatible"""
+    if DB_TYPE == "postgresql":
+        return f"LIMIT {n}"
+    else:
+        return f"TOP {n}"
+
+def sql_limit_clause(n: int) -> str:
+    """Generar cláusula LIMIT para final de query"""
+    if DB_TYPE == "postgresql":
+        return f"LIMIT {n}"
+    else:
+        return ""  # SQL Server usa TOP al principio
+
 @app.get("/")
 async def root():
     """Servir dashboard"""
@@ -110,22 +141,24 @@ async def get_filters():
         categories = [row[0] for row in cursor.fetchall()]
         
         # Rango de fechas y meses disponibles
-        cursor.execute("""
+        date_query = f"""
             SELECT 
                 MIN(order_date) as min_date, 
                 MAX(order_date) as max_date,
-                COUNT(DISTINCT FORMAT(order_date, 'yyyy-MM')) as total_months
+                COUNT(DISTINCT {sql_format_date('order_date', 'yyyy-MM')}) as total_months
             FROM orders WHERE status = 'paid'
-        """)
+        """
+        cursor.execute(date_query)
         date_row = cursor.fetchone()
         
         # Lista de meses únicos
-        cursor.execute("""
-            SELECT DISTINCT FORMAT(order_date, 'yyyy-MM') as month
+        months_query = f"""
+            SELECT DISTINCT {sql_format_date('order_date', 'yyyy-MM')} as month
             FROM orders 
             WHERE status = 'paid'
             ORDER BY month
-        """)
+        """
+        cursor.execute(months_query)
         months = [row[0] for row in cursor.fetchall()]
         
         cursor.close()
@@ -173,14 +206,18 @@ async def get_kpis(
         
         where_clause = " AND ".join(where_conditions)
         
+        # Diferentes funciones según BD
+        year_func = "EXTRACT(YEAR FROM o.order_date)" if DB_TYPE == "postgresql" else "YEAR(o.order_date)"
+        month_func = "EXTRACT(MONTH FROM o.order_date)" if DB_TYPE == "postgresql" else "MONTH(o.order_date)"
+        
         # Query para KPIs
         query = f"""
         WITH base_sales AS (
             SELECT 
                 o.order_id,
                 o.order_date,
-                YEAR(o.order_date) AS year,
-                MONTH(o.order_date) AS month,
+                {year_func} AS year,
+                {month_func} AS month,
                 oi.qty * oi.unit_price AS gross_sale,
                 o.discount_amount / NULLIF((SELECT SUM(qty) FROM order_items WHERE order_id = o.order_id), 0) * oi.qty AS item_discount,
                 oi.qty * oi.unit_cost AS cogs,
@@ -193,7 +230,7 @@ async def get_kpis(
         ),
         returns_calc AS (
             SELECT 
-                ISNULL(SUM(r.amount_returned), 0) AS total_returns
+                {sql_isnull('SUM(r.amount_returned)', '0')} AS total_returns
             FROM returns r
             JOIN orders o ON r.order_id = o.order_id
             JOIN stores s ON o.store_id = s.store_id
@@ -202,8 +239,8 @@ async def get_kpis(
         ),
         current_period AS (
             SELECT 
-                MAX(YEAR(order_date)) AS current_year,
-                MAX(MONTH(order_date)) AS current_month
+                MAX({year_func}) AS current_year,
+                MAX({month_func}) AS current_month
             FROM orders o
             JOIN stores s ON o.store_id = s.store_id
             JOIN customers c ON o.customer_id = c.customer_id
@@ -211,14 +248,11 @@ async def get_kpis(
         )
         SELECT 
             -- MTD (Month-to-Date del mes MÁS RECIENTE con datos)
-            ISNULL((SELECT TOP 1 SUM(gross_sale - item_discount) 
-             FROM base_sales 
-             GROUP BY year, month
-             ORDER BY year DESC, month DESC), 0) AS net_sales_mtd,
+            {sql_isnull(f"(SELECT SUM(gross_sale - item_discount) FROM base_sales GROUP BY year, month ORDER BY year DESC, month DESC {sql_limit_clause(1)})", '0')} AS net_sales_mtd,
             -- YTD (Year-to-Date antes de returns)
-            ISNULL((SELECT SUM(gross_sale - item_discount) FROM base_sales), 0) AS gross_ytd,
+            {sql_isnull('(SELECT SUM(gross_sale - item_discount) FROM base_sales)', '0')} AS gross_ytd,
             -- Gross Margin
-            ISNULL((SELECT SUM(gross_sale - item_discount - cogs) FROM base_sales), 0) AS gross_margin,
+            {sql_isnull('(SELECT SUM(gross_sale - item_discount - cogs) FROM base_sales)', '0')} AS gross_margin,
             -- Total Orders
             (SELECT COUNT(DISTINCT order_id) FROM base_sales) AS total_orders,
             -- Total Units
@@ -226,7 +260,7 @@ async def get_kpis(
             -- Total Returns
             (SELECT total_returns FROM returns_calc) AS total_returns,
             -- Gross Sales
-            ISNULL((SELECT SUM(gross_sale) FROM base_sales), 0) AS gross_sales
+            {sql_isnull('(SELECT SUM(gross_sale) FROM base_sales)', '0')} AS gross_sales
         """
         
         cursor.execute(query)
