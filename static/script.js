@@ -158,7 +158,8 @@ async function loadExecutiveDashboard() {
         
         // Tendencia Mensual
         const trendResponse = await fetch(`${API_BASE}/api/monthly-trend?${queryParams}`);
-        const trend = await trendResponse.json();
+        const trendData = await trendResponse.json();
+        const trend = Array.isArray(trendData) ? trendData : [];
         
         const months = trend.map(d => d.month);
         const netSales = trend.map(d => d.net_sales);
