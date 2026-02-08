@@ -597,11 +597,6 @@ async def get_top_products(
         ORDER BY gross_margin DESC
         {sql_limit_clause(10)}
         """
-        JOIN customers c ON o.customer_id = c.customer_id
-        WHERE {where_clause}
-        GROUP BY p.category, p.brand
-        ORDER BY gross_margin DESC
-        """
         
         cursor.execute(query)
         rows = cursor.fetchall()
