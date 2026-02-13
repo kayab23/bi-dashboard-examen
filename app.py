@@ -419,9 +419,10 @@ async def get_monthly_trend(
 async def get_sales_by_city(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
     channel: Optional[str] = Query(None)
 ):
-    """Net Sales por ciudad (NO filtrar por ciudad aquí)"""
+    """Net Sales por ciudad. Si se proporciona `city`, filtrará por esa ciudad."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -431,9 +432,10 @@ async def get_sales_by_city(
             where_conditions.append(f"o.order_date >= '{start_date}'")
         if end_date:
             where_conditions.append(f"o.order_date <= '{end_date}'")
+        if city:
+            where_conditions.append(f"s.city = '{city}'")
         if channel:
             where_conditions.append(f"c.channel = '{channel}'")
-        # NO filtrar por ciudad - queremos ver TODAS las ciudades
         
         where_clause = " AND ".join(where_conditions)
         
