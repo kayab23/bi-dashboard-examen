@@ -242,7 +242,8 @@ async function loadDriversDashboard() {
         
         // 1. Sales by City
         const cityResponse = await fetch(`${API_BASE}/api/sales-by-city?${queryParams}`);
-        const cityData = await cityResponse.json();
+        let cityData = await cityResponse.json();
+        if (!Array.isArray(cityData)) cityData = cityData.value || cityData.data || [];
         
         const cityTrace = {
             x: cityData.map(d => d.net_sales),
@@ -261,7 +262,8 @@ async function loadDriversDashboard() {
         
         // 2. Sales by Channel
         const channelResponse = await fetch(`${API_BASE}/api/sales-by-channel?${queryParams}`);
-        const channelData = await channelResponse.json();
+        let channelData = await channelResponse.json();
+        if (!Array.isArray(channelData)) channelData = channelData.value || channelData.data || [];
         
         const channelTrace = {
             x: channelData.map(d => d.net_sales),
@@ -280,7 +282,8 @@ async function loadDriversDashboard() {
         
         // 3. Top Products by Gross Margin
         const productsResponse = await fetch(`${API_BASE}/api/top-products?${queryParams}`);
-        const products = await productsResponse.json();
+        let products = await productsResponse.json();
+        if (!Array.isArray(products)) products = products.value || products.data || [];
         
         const productsTrace = {
             x: products.map(d => d.gross_margin),
@@ -301,7 +304,8 @@ async function loadDriversDashboard() {
         
         // 4. Category Mix (Pie Chart)
         const categoryResponse = await fetch(`${API_BASE}/api/sales-by-category?${queryParams}`);
-        const categoryData = await categoryResponse.json();
+        let categoryData = await categoryResponse.json();
+        if (!Array.isArray(categoryData)) categoryData = categoryData.value || categoryData.data || [];
         
         const categoryTrace = {
             labels: categoryData.map(d => d.category),
@@ -321,7 +325,8 @@ async function loadDriversDashboard() {
         
         // 5. New vs Returning Customers
         const nvReturningResponse = await fetch(`${API_BASE}/api/new-vs-returning?${queryParams}`);
-        const nvReturningData = await nvReturningResponse.json();
+        let nvReturningData = await nvReturningResponse.json();
+        if (!Array.isArray(nvReturningData)) nvReturningData = nvReturningData.value || nvReturningData.data || [];
         
         const newCustomersTrace = {
             x: nvReturningData.map(d => d.month),
