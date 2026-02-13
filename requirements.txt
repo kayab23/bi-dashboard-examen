@@ -1,9 +1,6 @@
-```pip-requirements
 fastapi==0.104.1
 uvicorn==0.24.0
 psycopg[binary]==3.2.13
 python-dotenv==1.0.0
 pandas==2.1.3
 sqlalchemy==2.0.23
-
-```
