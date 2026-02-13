@@ -72,9 +72,18 @@ def get_db_connection():
         if PSYCOPG_VERSION == 3:
             # psycopg v3
             conn = psycopg.connect(DATABASE_URL)
+            # Asegurar encoding cliente en UTF8 para evitar mojibake
+            try:
+                conn.execute("SET client_encoding TO 'UTF8'")
+            except Exception:
+                pass
         else:
             # psycopg2
             conn = psycopg2.connect(DATABASE_URL)
+            try:
+                conn.set_client_encoding('UTF8')
+            except Exception:
+                pass
         return conn
     else:
         # SQL Server (Local)
