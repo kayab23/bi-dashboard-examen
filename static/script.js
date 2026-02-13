@@ -261,7 +261,14 @@ async function loadDriversDashboard() {
         }, {responsive: true});
         
         // 2. Sales by Channel
-        const channelResponse = await fetch(`${API_BASE}/api/sales-by-channel?${queryParams}`);
+        // Para el gráfico por canal queremos siempre comparar ambos canales,
+        // por eso omitimos el parámetro `channel` en esta petición.
+        const paramsNoChannel = new URLSearchParams();
+        if (currentFilters.startDate) paramsNoChannel.append('start_date', currentFilters.startDate);
+        if (currentFilters.endDate) paramsNoChannel.append('end_date', currentFilters.endDate);
+        if (currentFilters.city) paramsNoChannel.append('city', currentFilters.city);
+
+        const channelResponse = await fetch(`${API_BASE}/api/sales-by-channel?${paramsNoChannel.toString()}`);
         let channelData = await channelResponse.json();
         if (!Array.isArray(channelData)) channelData = channelData.value || channelData.data || [];
         
