@@ -736,6 +736,56 @@ async def get_new_vs_returning(
 from init_data import router as init_router
 app.include_router(init_router, tags=["admin"])
 
+# =====================
+# Keep-alive background ping
+# =====================
+import asyncio
+try:
+    import httpx
+except Exception:
+    httpx = None
+
+# Configurable via env:
+# KEEP_ALIVE=true|1 to enable
+# KEEP_ALIVE_INTERVAL seconds between pings (default 300)
+# KEEP_ALIVE_URL full URL to ping (default http://127.0.0.1:$PORT/health)
+KEEP_ALIVE_ENABLED = os.getenv("KEEP_ALIVE", "false").lower() in ("1", "true", "yes")
+KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL", "300"))
+KEEP_ALIVE_URL = os.getenv("KEEP_ALIVE_URL") or f"http://127.0.0.1:{os.getenv('PORT','8000')}/health"
+
+
+@app.on_event("startup")
+async def _startup_keep_alive():
+    if not KEEP_ALIVE_ENABLED or httpx is None:
+        return
+
+    app.state._keepalive_stop = asyncio.Event()
+
+    async def _loop():
+        async with httpx.AsyncClient(timeout=10) as client:
+            while not app.state._keepalive_stop.is_set():
+                try:
+                    resp = await client.get(KEEP_ALIVE_URL)
+                    print(f"🔁 keep-alive ping to {KEEP_ALIVE_URL}: {resp.status_code}")
+                except Exception as e:
+                    print(f"⚠️ keep-alive ping failed: {e}")
+                await asyncio.sleep(KEEP_ALIVE_INTERVAL)
+
+    app.state._keepalive_task = asyncio.create_task(_loop())
+
+
+@app.on_event("shutdown")
+async def _shutdown_keep_alive():
+    stop = getattr(app.state, "_keepalive_stop", None)
+    task = getattr(app.state, "_keepalive_task", None)
+    if stop is not None:
+        stop.set()
+    if task is not None:
+        try:
+            await task
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
