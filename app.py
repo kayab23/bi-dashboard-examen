@@ -436,18 +436,24 @@ async def get_sales_by_city(
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        where_conditions = ["o.status = 'paid'"]
+        # Separar condiciones que aplican dentro del CTE (no referencian stores)
+        inner_conditions = ["o.status = 'paid'"]
         if start_date:
-            where_conditions.append(f"o.order_date >= '{start_date}'")
+            inner_conditions.append(f"o.order_date >= '{start_date}'")
         if end_date:
-            where_conditions.append(f"o.order_date <= '{end_date}'")
-        if city:
-            where_conditions.append(f"s.city = '{city}'")
+            inner_conditions.append(f"o.order_date <= '{end_date}'")
         if channel:
-            where_conditions.append(f"c.channel = '{channel}'")
-        
-        where_clause = " AND ".join(where_conditions)
-        
+            inner_conditions.append(f"c.channel = '{channel}'")
+
+        inner_where = " AND ".join(inner_conditions)
+
+        # Condiciones externas que requieren la tabla stores (p.ej. city)
+        outer_conditions = []
+        if city:
+            outer_conditions.append(f"s.city = '{city}'")
+
+        outer_where_clause = f"WHERE {' AND '.join(outer_conditions)}" if outer_conditions else ""
+
         query = f"""
         WITH order_totals AS (
             SELECT 
@@ -458,7 +464,7 @@ async def get_sales_by_city(
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN customers c ON o.customer_id = c.customer_id
-            WHERE {where_clause}
+            WHERE {inner_where}
             GROUP BY o.order_id, o.store_id, o.discount_amount
         )
         SELECT 
@@ -466,6 +472,7 @@ async def get_sales_by_city(
             SUM(ot.order_sales - ot.discount_amount) AS net_sales
         FROM order_totals ot
         JOIN stores s ON ot.store_id = s.store_id
+        {outer_where_clause}
         GROUP BY s.city
         ORDER BY net_sales DESC
         """
