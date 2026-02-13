@@ -14,20 +14,22 @@ on:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Ping Health Endpoint
+      - name: Ping Health Endpoint (with retries)
         run: |
           echo "🔄 Haciendo ping a Render para mantener servicio activo..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://bi-dashboard-examen.onrender.com/health)
-          
-          if [ $response -eq 200 ]; then
+          # Hacemos varios reintentos para evitar falsos negativos
+          response=$(curl -sS --retry 5 --retry-delay 2 --max-time 10 -o /dev/null -w "%{http_code}" https://bi-dashboard-examen.onrender.com/health || echo "000")
+
+          if [ "$response" -ge 200 ] && [ "$response" -lt 400 ]; then
             echo "✅ Servicio activo - Status: $response"
           else
             echo "⚠️  Respuesta inesperada - Status: $response"
-            exit 1
+            # No fallamos el job: queremos mantener el ping incluso si temporalmente la app no responde
+            # exit 1
           fi
-      
+
       - name: Log Timestamp
         run: |
           echo "Última ejecución: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
