@@ -130,6 +130,12 @@ async def root():
     """Servir dashboard"""
     return FileResponse("static/index.html")
 
+
+@app.get("/ping")
+async def ping():
+    """Lightweight ping for keep-alive monitors; always returns 200 quickly."""
+    return {"status": "ok"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint para mantener servicio activo (UptimeRobot)"""
